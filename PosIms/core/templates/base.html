@@ -1,0 +1,182 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}POS & Inventory Management System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Custom Modern CSS -->
+    <link rel="stylesheet" href="{% static 'css/pos_modern.css' %}?v=2">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="{% url 'dashboard' %}">
+                <img src="{% static 'img/logo.jpeg' %}" alt="Logo" style="height:32px; margin-right:10px;">
+                <span>POS & Inventory System</span>
+            </a>
+            <!-- Debug: clickable static URL for the logo (remove after debugging) -->
+            <a class="ms-3 d-none d-md-inline-block" href="{% static 'img/logo.jpeg' %}" target="_blank" rel="noopener" style="font-size:12px; text-decoration:underline;">Open logo file</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                    {% if user.role == 'admin' %}
+                        <li class="nav-item me-2 d-flex align-items-center">
+                            <a class="btn btn-sm btn-primary" href="{% url 'sales_transaction' %}" role="button">
+                                <i class="bi bi-receipt me-1"></i> New Sale
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <span class="nav-link fw-bold text-primary">{{ user.username }} ({{ user.get_role_display }})</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-danger" href="{% url 'logout' %}">Logout</a>
+                    </li>
+                    
+                    <!-- Mobile View Menu Items -->
+                    <div class="d-md-none mt-3 border-top pt-3">
+                        <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}"><i class="bi bi-house me-2"></i>Dashboard</a></li>
+                        {% if user.role != 'cashier' %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'product_list' %}"><i class="bi bi-box me-2"></i>Products</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'customer_list' %}"><i class="bi bi-people me-2"></i>Customers</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_status' %}"><i class="bi bi-pie-chart me-2"></i>Inventory</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'sales_report' %}"><i class="bi bi-graph-up me-2"></i>Reports</a></li>
+                        {% endif %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'sales_history' %}"><i class="bi bi-clock-history me-2"></i>Sales History</a></li>
+                    </div>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="container mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show alert-custom" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="container-fluid">
+        <div class="row">
+            {% if user.is_authenticated %}
+            <!-- Sidebar Navigation -->
+            <div class="col-md-2 sidebar d-none d-md-block">
+                <h5 class="text-white text-center mb-4">Menu</h5>
+                <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+                
+                {% if user.role != 'cashier' %}
+                    <h6 class="text-muted mt-4 px-3">Products</h6>
+                    <a href="{% url 'product_list' %}" class="{% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="bi bi-box"></i> Products
+                    </a>
+                    <a href="{% url 'product_create' %}">
+                        <i class="bi bi-plus-circle"></i> Add Product
+                    </a>
+                {% endif %}
+                
+                {% if user.role != 'cashier' %}
+                    <h6 class="text-muted mt-4 px-3">Customers</h6>
+                    <a href="{% url 'customer_list' %}" class="{% if 'customer' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="bi bi-people"></i> Customers
+                    </a>
+                {% endif %}
+
+                {% if user.role == 'cashier' %}
+                    <a href="{% url 'customer_create' %}">
+                        <i class="bi bi-person-plus"></i> New Customer
+                    </a>
+                {% endif %}
+
+                <h6 class="text-muted mt-4 px-3">Sales</h6>
+                {% if user.role == 'cashier' %}
+                    <a href="{% url 'sales_transaction' %}" class="{% if request.resolver_match.url_name == 'sales_transaction' %}active{% endif %}">
+                        <i class="bi bi-receipt"></i> New Sale
+                    </a>
+                {% endif %}
+                <a href="{% url 'sales_history' %}">
+                    <i class="bi bi-clock-history"></i> Sales History
+                </a>
+                <a href="{% url 'product_returns' %}">
+                    <i class="bi bi-arrow-return-left"></i> Returns
+                </a>
+                {% if user.role != 'cashier' %}
+                    <a href="{% url 'purchase_list' %}">
+                        <i class="bi bi-bag-check"></i> Purchases
+                    </a>
+                {% endif %}
+                
+                {% if user.role != 'cashier' %}
+                    <h6 class="text-muted mt-4 px-3">Inventory</h6>
+                    <a href="{% url 'inventory_status' %}">
+                        <i class="bi bi-pie-chart"></i> Inventory Status
+                    </a>
+                    
+                    <h6 class="text-muted mt-4 px-3">Reports</h6>
+                    <a href="{% url 'sales_report' %}">
+                        <i class="bi bi-graph-up"></i> Sales Report
+                    </a>
+                    <a href="{% url 'inventory_report' %}">
+                        <i class="bi bi-graph-down"></i> Inventory Report
+                    </a>
+                {% endif %}
+
+                {% if user.role == 'admin' %}
+                    <h6 class="text-muted mt-4 px-3">Admin</h6>
+                    <a href="{% url 'register' %}">
+                        <i class="bi bi-person-badge"></i> Create User
+                    </a>
+                    <a href="{% url 'supplier_list' %}">
+                        <i class="bi bi-people"></i> Suppliers
+                    </a>
+                    <a href="{% url 'sales_transaction' %}">
+                        <i class="bi bi-receipt"></i> New Sale
+                    </a>
+                {% endif %}
+            </div>
+            <div class="col-md-10 p-4">
+            {% else %}
+            <div class="col-md-12 p-4">
+            {% endif %}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <p>&copy; 2026 POS & Inventory Management System. All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- Mousetrap (Keyboard Navigation) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mousetrap/1.6.5/mousetrap.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <!-- Custom Keyboard Shortcuts -->
+    <script src="{% static 'js/hotkeys.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

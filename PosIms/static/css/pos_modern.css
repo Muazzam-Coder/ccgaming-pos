@@ -1,0 +1,393 @@
+/* pos_modern.css - 2026 POS Aesthetics */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --secondary-color: #10b981;
+    --bg-color: #f3f4f6;
+    --card-bg: #ffffff;
+    --text-color: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+    --sidebar-bg: #111827;
+    --sidebar-text: #f9fafb;
+    --sidebar-active: #1f2937;
+    --sidebar-hover: #374151;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    
+    /* Neumorphism / Glassmorphism touches */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --border-radius-md: 0.5rem;
+    --border-radius-lg: 0.75rem;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Navbar */
+.navbar {
+    background: var(--card-bg) !important;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.navbar-brand {
+    color: var(--primary-color) !important;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+.nav-link {
+    color: var(--text-color) !important;
+    font-weight: 500;
+}
+
+/* Sidebar */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    min-height: calc(100vh - 56px); /* subtract navbar height */
+    box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.sidebar h5, .sidebar h6 {
+    color: var(--text-muted) !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.sidebar a {
+    color: var(--sidebar-text);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-md);
+    margin: 0.25rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    text-decoration: none;
+}
+
+.sidebar a:hover {
+    background-color: var(--sidebar-hover);
+    color: white;
+    transform: translateX(4px);
+}
+
+.sidebar a.active {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+/* Cards */
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-header {
+    background-color: transparent !important;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    padding: 1.25rem 1.5rem;
+}
+
+/* Buttons */
+.btn {
+    font-weight: 500;
+    border-radius: var(--border-radius-md);
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Inputs & Forms */
+.form-control, .form-select {
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background-color: #f9fafb;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    background-color: #ffffff;
+}
+
+/* Tables */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #f9fafb;
+    border-bottom: 2px solid var(--border-color);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+}
+
+.table td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Specific POS layout fixes */
+.item-row {
+    background-color: #f9fafb;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: background-color 0.2s;
+}
+.item-row:focus-within {
+    background-color: #eef2ff;
+    border-color: var(--primary-color);
+}
+
+/* Hotkey hint bubbles */
+.hk-hint {
+    background-color: var(--sidebar-hover);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-family: monospace;
+    opacity: 0.8;
+}
+
+/* Dark mode toggle basic support */
+/* To make it fully dark mode, we'd toggle a .dark-mode class on body and invert the root variables */
+body.dark-mode {
+    --bg-color: #111827;
+    --card-bg: #1f2937;
+    --text-color: #f9fafb;
+    --text-muted: #9ca3af;
+    --border-color: #374151;
+}
+body.dark-mode .form-control, body.dark-mode .form-select {
+    background-color: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 991.98px) {
+    .sidebar { min-height: auto; padding-bottom: 1rem; border-right: none; }
+    h2.display-5 { font-size: 2.5rem; }
+    .col-lg-8, .col-lg-4 { width: 100%; }
+    .sticky-top { position: relative !important; top: 0 !important; }
+}
+
+@media (max-width: 767.98px) {
+    .container-fluid { padding-left: 0.5rem; padding-right: 0.5rem; }
+    .card-body { padding: 1.25rem !important; }
+    .card-header { padding: 1rem 1.25rem; }
+    .table-responsive { border: 0; }
+    .btn-lg { font-size: 1rem; padding: 0.5rem 1rem; }
+    
+    /* Table headers text overflow */
+    .table th { font-size: 0.70rem; padding: 0.75rem 0.5rem; }
+    .table td { padding: 0.75rem 0.5rem; font-size: 0.9rem; }
+}
+
+/* Enhanced mobile responsiveness and fluid typography */
+:root {
+    --touch-size: 48px; /* recommended minimum touch target */
+}
+
+/* Fluid base font size for a range of devices */
+body {
+    font-size: clamp(14px, 1.8vw, 16px);
+}
+
+/* Headings scale nicely on small screens */
+h1 { font-size: clamp(1.4rem, 3.4vw, 2.25rem); }
+h2 { font-size: clamp(1.25rem, 3vw, 1.75rem); }
+h3 { font-size: clamp(1.1rem, 2.4vw, 1.25rem); }
+
+/* Make form controls and buttons easier to tap on mobile */
+.form-control, .form-select {
+    width: 100%;
+    min-height: var(--touch-size);
+    padding: 0.75rem 0.9rem;
+    box-sizing: border-box;
+}
+.btn, .btn-primary { min-height: var(--touch-size); padding: 0.6rem 1rem; }
+
+/* Ensure tables are scrollable on narrow screens */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { min-width: 640px; }
+
+/* Mobile-specific layout tweaks for compact phones (~360px width and below) */
+@media (max-width: 400px) {
+    .navbar-brand { font-size: 0.95rem; }
+    .navbar .nav-link { padding: 0.45rem 0.6rem; font-size: 0.9rem; }
+    .sidebar a { margin: 0.15rem 0.5rem; padding: 0.6rem 1rem; }
+    .card-header { font-size: 0.95rem; }
+    .table th, .table td { padding: 0.5rem 0.4rem; font-size: 0.85rem; }
+}
+
+/* Medium phones and phablets adjustments (e.g., OnePlus 8T, Infinix Zero 40) */
+@media (min-width: 401px) and (max-width: 767.98px) {
+    .navbar-brand { font-size: 1.05rem; }
+    .sidebar { padding: 0.5rem 0; }
+    .card { margin-left: 0.25rem; margin-right: 0.25rem; }
+}
+
+/* Larger phones and small tablets (e.g., Vivo Y31) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .container-fluid { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .sidebar { min-height: auto; }
+}
+
+/* Utility: reduce heavy shadows on small devices for performance */
+@media (max-width: 767.98px) {
+    .card, .sidebar, .btn { box-shadow: none; }
+}
+
+/* Fix: remove leftover sidebar/gutter on small mobile screens */
+@media (max-width: 767.98px) {
+    /* Ensure sidebar is fully hidden */
+    .sidebar { display: none !important; visibility: hidden !important; height: 0 !important; padding: 0 !important; margin: 0 !important; }
+
+    /* Make main content take full width and remove left gap */
+    .col-md-10.p-4, .col-md-12.p-4 { width: 100% !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+
+    /* Collapse any left margin introduced by icons or floats */
+    .navbar, .container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+
+    /* When navbar toggler is present, ensure collapsed menu uses full width */
+    .navbar .collapse { width: 100%; }
+}
+
+/* Strong overrides for containers/rows that may be constraining width on mobile */
+@media (max-width: 767.98px) {
+    html, body, .container, .container-fluid, .row {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Make Bootstrap .container behave like fluid on small screens */
+    .container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+
+    /* Ensure all cols expand fully and remove auto horizontal centering */
+    [class*="col-"] {
+        float: none !important;
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Remove any fixed width canvas or chart wrappers that could shrink layout */
+    canvas, .chart-container { max-width: 100% !important; width: 100% !important; height: auto !important; }
+}
+
+/* Hide dashboard summary cards only on very small phones to avoid empty stacked placeholders */
+/* Relaxed breakpoint so summary cards remain visible on most tablets and phones */
+@media (max-width: 400px) {
+    .dashboard-summary-row { display: none !important; }
+}
+
+/* Make summary card labels prominent (fix invisible/selection-only text) */
+.dashboard-summary-row .card h6,
+.dashboard-summary-row .card .text-uppercase {
+    color: rgba(255,255,255,0.95) !important;
+    background: rgba(0,0,0,0.06) !important;
+    display: inline-block !important;
+    padding: 0.25rem 0.6rem !important;
+    border-radius: 6px !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* For summary cards that use plain white background, switch to primary accent */
+.dashboard-summary-row .card:not(.bg-gradient) .card-body h6,
+.dashboard-summary-row .card:not(.bg-gradient) .card-body .text-uppercase {
+    color: var(--primary-color) !important;
+    background: transparent !important;
+}
+
+/* Make the big summary numbers clearly visible */
+.dashboard-summary-row .card .card-body h2.display-5 {
+    color: #000000 !important; /* force black for visibility */
+    font-size: 1.6rem !important; /* larger for readability on mobile */
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    text-shadow: none !important;
+}
+
+/* For non-gradient summary cards, use primary accent for numbers */
+.dashboard-summary-row .card:not(.bg-gradient) .card-body h2.display-5 {
+    color: var(--primary-color) !important;
+    text-shadow: none !important;
+}
+
+/* User-request: force summary numbers to black for better visibility */
+.dashboard-summary-row .card .card-body h2.display-5.fw-bold,
+.dashboard-summary-row .card .card-body h2 {
+    color: #000000 !important;
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    text-shadow: none !important;
+}
+
+/* Stronger overrides: ensure gradient cards keep white numbers and non-gradient use dark numbers */
+.dashboard-summary-row .card.bg-gradient .card-body h2.display-5 {
+    color: #ffffff !important;
+}
+.dashboard-summary-row .card:not(.bg-gradient) .card-body h2.display-5 {
+    color: #000000 !important;
+}
+
+/* Ensure card body has enough height so numbers are visible and vertically centered */
+.dashboard-summary-row .card .card-body {
+    min-height: 110px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+/* Make action icons and hotkey hints slightly larger on touch screens */
+.hk-hint { font-size: 0.8rem; padding: 4px 8px; }
+

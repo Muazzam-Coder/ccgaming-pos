@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Record Purchase{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0 fw-bold">Record Purchase</h1>
+    <a href="{% url 'purchase_list' %}" class="btn btn-outline-secondary">Back to Purchases</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                {{ form.supplier.label_tag }}
+                {{ form.supplier }}
+            </div>
+            <div class="mb-3">
+                {{ form.purchase_type.label_tag }}
+                {{ form.purchase_type }}
+            </div>
+            <div class="mb-3">
+                {{ form.credit_by.label_tag }}
+                {{ form.credit_by }}
+            </div>
+            <div class="mb-3">
+                {{ form.total_amount.label_tag }}
+                {{ form.total_amount }}
+            </div>
+            <button class="btn btn-primary">Save</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
