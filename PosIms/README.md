@@ -12,7 +12,7 @@ A fully-featured, modern, keyboard-first Point of Sale (POS) and Inventory Manag
 ### 📊 Advanced Dashboards & Analytics
 - **Role-Based Access Control:** Distinct views for `Admin`, `Manager`, and `Cashier` roles.
 - **Visual Analytics:** Interactive `Chart.js` components tracking the last 7 days of revenue natively.
-- **1-Click Exporting:** Instantly export sales history, product status, and inventory data out to `.csv` format.
+-- **Data Export:** CSV export functionality is disabled in this build.
 - **Low Stock Alerts:** Automated warnings when inventory falls below threshold levels.
 
 ### 🔌 RESTful API Integration

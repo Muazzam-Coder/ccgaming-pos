@@ -6,9 +6,6 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="mb-0 fw-bold"><i class="bi bi-box-seam text-primary me-2"></i>Inventory Report</h1>
-    <a href="?export=1" class="btn btn-success shadow-sm">
-        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export to CSV
-    </a>
 </div>
 
 <div class="row mb-4">
@@ -33,7 +30,6 @@
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary">Apply</button>
-                <a href="?{% if selected_purchase_type %}purchase_type={{ selected_purchase_type }}&{% endif %}{% if selected_supplier_id %}supplier_id={{ selected_supplier_id }}&{% endif %}export=1" class="btn btn-success ms-2">Export CSV</a>
             </div>
         </form>
     </div>

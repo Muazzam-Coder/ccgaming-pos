@@ -7,9 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="mb-0 fw-bold">Supplier History - {{ supplier.name }}</h1>
     <div>
-        <a href="?export=1&mode=both" class="btn btn-success">Export All CSV</a>
-        <a href="?export=1&mode=purchases" class="btn btn-outline-primary ms-2">Export Purchases</a>
-        <a href="?export=1&mode=sales" class="btn btn-outline-secondary ms-2">Export Sales</a>
+        <!-- Export removed -->
     </div>
 </div>
 
@@ -40,64 +38,70 @@
     </div>
 </div>
 
-<div class="card mb-4">
+    <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">Purchases</h5>
+        <h5 class="mb-0">Purchas&Sell</h5>
     </div>
     <div class="table-responsive">
         <table class="table mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>ID</th>
-                    <th>Date</th>
                     <th>Type</th>
-                    <th>Credit By</th>
-                    <th>Total</th>
+                    <th>Ref ID</th>
+                    <th>Date</th>
+                    <th>Item / Supplier</th>
+                    <th>Quantity</th>
+                    <th>Amount</th>
                 </tr>
             </thead>
             <tbody>
-                {% for p in purchases %}
+                {% for row in combined_history %}
                 <tr>
-                    <td>{{ p.id }}</td>
-                    <td>{{ p.timestamp|date:"M d, Y H:i" }}</td>
-                    <td>{{ p.get_purchase_type_display }}</td>
-                    <td>{% if p.credit_by %}{{ p.credit_by.username }}{% else %}-{% endif %}</td>
-                    <td>{{ p.total_amount|currency }}</td>
+                    <td>{{ row.type }}</td>
+                    <td>{{ row.ref_id }}</td>
+                    <td>{{ row.date|date:"M d, Y H:i" }}</td>
+                    <td>{{ row.item }}</td>
+                    <td>{{ row.quantity }}</td>
+                    <td>{{ row.amount|currency }}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="text-center">No purchases found.</td></tr>
+                <tr><td colspan="6" class="text-center">No history found for this supplier.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header bg-info text-white">
-        <h5 class="mb-0">Sales (products supplied by {{ supplier.name }})</h5>
+<div class="card mt-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">Product Summary (Supplier: {{ supplier.name }})</h5>
     </div>
     <div class="table-responsive">
         <table class="table mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Sale ID</th>
-                    <th>Date</th>
                     <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Line Total</th>
+                    <th>Purchase Price</th>
+                    <th>Selling Price</th>
+                    <th>Acquired Qty</th>
+                    <th>Sold Qty</th>
+                    <th>Purchase Subtotal</th>
+                    <th>Sales Revenue</th>
                 </tr>
             </thead>
             <tbody>
-                {% for si in sale_items %}
+                {% for row in product_summary %}
                 <tr>
-                    <td>{{ si.sale.id }}</td>
-                    <td>{{ si.sale.timestamp|date:"M d, Y H:i" }}</td>
-                    <td>{{ si.product.name }}</td>
-                    <td>{{ si.quantity }}</td>
-                    <td>{{ si.quantity|mul:si.price_at_sale|currency }}</td>
+                    <td>{{ row.product.name }}</td>
+                    <td>{{ row.purchase_price|currency }}</td>
+                    <td>{{ row.selling_price|currency }}</td>
+                    <td>{{ row.acquired_qty }}</td>
+                    <td>{{ row.sold_qty }}</td>
+                    <td>{{ row.purchase_subtotal|currency }}</td>
+                    <td>{{ row.sales_revenue|currency }}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="text-center">No sales found for products from this supplier.</td></tr>
+                <tr><td colspan="7" class="text-center">No products found for this supplier.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

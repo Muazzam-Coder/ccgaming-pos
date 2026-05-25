@@ -16,8 +16,8 @@
         <div class="col-auto">
             <select name="type" class="form-select">
                 <option value="">All</option>
-                <option value="cash" {% if filter_type=='cash' %}selected{% endif %}>Cash</option>
-                <option value="credit" {% if filter_type=='credit' %}selected{% endif %}>Credit</option>
+                <option value="cash" {% if filter_type == 'cash' %}selected{% endif %}>Cash</option>
+                <option value="credit" {% if filter_type == 'credit' %}selected{% endif %}>Credit</option>
             </select>
         </div>
         <div class="col-auto">
@@ -48,7 +48,7 @@
                         <td>{{ p.supplier|default:'-' }}</td>
                         <td>{{ p.get_purchase_type_display }}</td>
                         <td>{% if p.credit_by %}{{ p.credit_by.username }}{% else %}-{% endif %}</td>
-                        <td>{{ p.total_amount|currency }}</td>
+                        <td>{{ p.computed_total|currency }}</td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="6" class="text-center">No purchases found.</td></tr>

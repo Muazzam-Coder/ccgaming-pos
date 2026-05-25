@@ -16,7 +16,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows products to be viewed or edited.
     """
-    queryset = Product.objects.all().order_by('name')
+    queryset = Product.objects.filter(is_active=True).order_by('name')
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
 

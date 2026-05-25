@@ -11,8 +11,9 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 
 from .models import User, Customer, Product, Sale, SaleItem, Return, Supplier
+from .models import PurchaseItem
 from .forms import (UserRegistrationForm, CustomerForm, ProductForm, 
-                    SaleItemForm, SaleForm, SearchProductForm, ReportForm, PurchaseForm)
+                    SaleItemForm, SaleForm, SearchProductForm, ReportForm, PurchaseForm, SupplierForm)
 from .models import Purchase
 
 
@@ -86,8 +87,6 @@ def dashboard(request):
     
     if request.user.role == 'admin':
         context['total_users'] = User.objects.count()
-        context['total_customers'] = Customer.objects.count()
-        context['total_products'] = Product.objects.count()
         context['total_sales'] = Sale.objects.count()
         return render(request, 'admin_dashboard.html', context)
     
@@ -96,6 +95,7 @@ def dashboard(request):
         context['today_revenue'] = revenue_data[-1]  # Today's revenue is the last item
         context['low_stock_products'] = Product.objects.filter(stock_quantity__lte=F('low_stock_threshold')).count()
         context['total_customers'] = Customer.objects.count()
+        context['total_products'] = Product.objects.filter(is_active=True).count()
         return render(request, 'manager_dashboard.html', context)
     
     else:  # cashier
@@ -113,7 +113,7 @@ def product_list(request):
         return redirect('dashboard')
     
     form = SearchProductForm(request.GET or None)
-    products = Product.objects.all()
+    products = Product.objects.filter(is_active=True)
     
     if form.is_valid():
         search = form.cleaned_data.get('search')
@@ -185,8 +185,9 @@ def product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
     
     if request.method == 'POST':
-        product.delete()
-        messages.success(request, 'Product deleted successfully.')
+        product.is_active = False
+        product.save()
+        messages.success(request, 'Product removed from portal (soft-deleted).')
         return redirect('product_list')
     
     return render(request, 'product_confirm_delete.html', {'product': product})
@@ -295,7 +296,7 @@ def sales_transaction(request):
             if stock_issues:
                 messages.error(request, 'Insufficient stock: ' + ' | '.join(stock_issues))
                 form = SaleForm()
-                products_list = Product.objects.all()
+                products_list = Product.objects.filter(is_active=True)
                 return render(request, 'sales_transaction.html', {
                     'form': form,
                     'products': products_list
@@ -478,7 +479,7 @@ def inventory_status(request):
         messages.error(request, 'Access denied. Manager or Admin only.')
         return redirect('dashboard')
     
-    products = Product.objects.all()
+    products = Product.objects.filter(is_active=True)
     low_stock_products = products.filter(stock_quantity__lte=F('low_stock_threshold'))
 
     total_stock_value = products.aggregate(
@@ -511,6 +512,13 @@ def purchase_list(request):
     if ptype in ('cash', 'credit'):
         purchases = purchases.filter(purchase_type=ptype)
 
+    # Ensure each purchase has a computed_total attribute (fallback to Purchase.total_amount)
+    from .models import PurchaseItem
+    for p in purchases:
+        # compute sum of purchase items for this purchase
+        agg = PurchaseItem.objects.filter(purchase=p).aggregate(total=Sum(ExpressionWrapper(F('quantity') * F('price_at_purchase'), output_field=DecimalField())))
+        p.computed_total = agg['total'] or p.total_amount or 0
+
     context = {'purchases': purchases, 'filter_type': ptype}
     return render(request, 'purchase_list.html', context)
 
@@ -522,18 +530,63 @@ def purchase_create(request):
         messages.error(request, 'Access denied. Manager or Admin only.')
         return redirect('dashboard')
 
+    products = Product.objects.filter(is_active=True)
+
     if request.method == 'POST':
         form = PurchaseForm(request.POST)
+        product_ids = request.POST.getlist('product_id')
+        quantities = request.POST.getlist('quantity')
+        prices = request.POST.getlist('price')
+
         if form.is_valid():
+            if not product_ids:
+                messages.error(request, 'Please add at least one product line to the purchase.')
+                return render(request, 'purchase_form.html', {'form': form, 'products': products})
+
             purchase = form.save(commit=False)
             purchase.created_by = request.user
+
+            # compute total from line items
+            total_amount = 0
+            line_items = []
+            for pid, qty, pr in zip(product_ids, quantities, prices):
+                try:
+                    prod = Product.objects.get(pk=int(pid))
+                except (Product.DoesNotExist, ValueError):
+                    continue
+                try:
+                    q = int(qty)
+                except ValueError:
+                    q = 0
+                try:
+                    pprice = float(pr)
+                except ValueError:
+                    pprice = float(prod.purchase_price or 0)
+
+                if q <= 0:
+                    continue
+                line_total = q * pprice
+                total_amount += line_total
+                line_items.append((prod, q, pprice))
+
+            purchase.total_amount = total_amount
             purchase.save()
+
+            # create PurchaseItem records and update product stock
+            for prod, q, pprice in line_items:
+                from .models import PurchaseItem
+                PurchaseItem.objects.create(purchase=purchase, product=prod, quantity=q, price_at_purchase=pprice)
+                prod.stock_quantity = (prod.stock_quantity or 0) + q
+                # update last purchase price
+                prod.purchase_price = pprice
+                prod.save()
+
             messages.success(request, 'Purchase recorded successfully.')
             return redirect('purchase_list')
     else:
         form = PurchaseForm()
 
-    return render(request, 'purchase_form.html', {'form': form})
+    return render(request, 'purchase_form.html', {'form': form, 'products': products})
 
 
 @login_required
@@ -571,7 +624,11 @@ def purchase_report(request):
     if end:
         purchases = purchases.filter(timestamp__date__lte=end)
 
-    total = purchases.aggregate(total=Sum('total_amount'))['total'] or 0
+    # Prefer to compute total from PurchaseItem lines for accuracy (fallback to Purchase.total_amount)
+    try:
+        total = PurchaseItem.objects.filter(purchase__in=purchases).aggregate(total=Sum(ExpressionWrapper(F('quantity') * F('price_at_purchase'), output_field=DecimalField())))['total'] or 0
+    except Exception:
+        total = purchases.aggregate(total=Sum('total_amount'))['total'] or 0
     # Build supplier summary (total purchases + total sales for products from that supplier)
     supplier_summary = []
     sale_items = SaleItem.objects.all()
@@ -587,27 +644,7 @@ def purchase_report(request):
             'sales_total': sup_sales_total,
         })
 
-    # CSV export for purchases or supplier summary
-    if request.GET.get('export') == '1':
-        import csv
-        from django.http import HttpResponse
-        # If summary=1, export supplier summary
-        if request.GET.get('summary') == '1':
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = 'attachment; filename="supplier_summary.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['Supplier', 'Total Purchases', 'Total Sales'])
-            for row in supplier_summary:
-                writer.writerow([row['supplier'].name, float(row['purchases_total']), float(row['sales_total'])])
-            return response
-        else:
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = 'attachment; filename="purchases_detailed.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['ID', 'Date', 'Supplier', 'Type', 'Credit By', 'Total'])
-            for p in purchases:
-                writer.writerow([p.id, p.timestamp.strftime('%Y-%m-%d %H:%M'), p.supplier or '', p.get_purchase_type_display(), (p.credit_by.username if p.credit_by else ''), float(p.total_amount)])
-            return response
+    # Export disabled: CSV export removed per project settings
 
     context = {'purchases': purchases, 'total': total, 'filter_type': ptype, 'start': start, 'end': end, 'suppliers': suppliers, 'selected_supplier': sel_sup, 'supplier_summary': supplier_summary}
     return render(request, 'purchase_report.html', context)
@@ -628,43 +665,101 @@ def supplier_history(request, pk):
     # Sale items for products that have this supplier FK
     sale_items = SaleItem.objects.filter(product__supplier=sup).select_related('sale', 'product').order_by('-sale__timestamp')
 
-    purchases_total = purchases.aggregate(total=Sum('total_amount'))['total'] or 0
+    # purchases_total: prefer sum of PurchaseItem lines for purchases that reference this supplier text
+    from .models import PurchaseItem
+    purchases_total = PurchaseItem.objects.filter(purchase__supplier__icontains=sup.name).aggregate(
+        total=Sum(ExpressionWrapper(F('quantity') * F('price_at_purchase'), output_field=DecimalField()))
+    )['total']
+    if not purchases_total:
+        # fallback to older Purchase.total_amount field if PurchaseItem rows are missing
+        purchases_total = purchases.aggregate(total=Sum('total_amount'))['total'] or 0
     sales_total = sale_items.aggregate(
         total=Sum(ExpressionWrapper(F('quantity') * F('price_at_sale'), output_field=DecimalField()))
     )['total'] or 0
 
-    # CSV export
-    if request.GET.get('export') == '1':
-        import csv
-        from django.http import HttpResponse
-        mode = request.GET.get('mode', 'both')
-        if mode == 'purchases':
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="{sup.name}_purchases.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['ID', 'Date', 'Supplier', 'Type', 'Credit By', 'Total'])
-            for p in purchases:
-                writer.writerow([p.id, p.timestamp.strftime('%Y-%m-%d %H:%M'), p.supplier or '', p.get_purchase_type_display(), (p.credit_by.username if p.credit_by else ''), float(p.total_amount)])
-            return response
-        elif mode == 'sales':
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="{sup.name}_sales.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['Sale ID', 'Sale Date', 'Product', 'Quantity', 'Price', 'Line Total'])
-            for si in sale_items:
-                writer.writerow([si.sale.id, si.sale.timestamp.strftime('%Y-%m-%d %H:%M'), si.product.name, si.quantity, float(si.price_at_sale), float(si.quantity * si.price_at_sale)])
-            return response
+    # Build per-product summary for products that belong to this supplier
+    products_for_supplier = Product.objects.filter(supplier=sup)
+    product_summary = []
+    for p in products_for_supplier:
+        total_sold = SaleItem.objects.filter(product=p).aggregate(qty=Sum('quantity'))['qty'] or 0
+        current_stock = p.stock_quantity or 0
+        # total acquired from this supplier = sum of PurchaseItem.quantity for purchases linked to this supplier text
+        acquired_agg = PurchaseItem.objects.filter(product=p, purchase__supplier__icontains=sup.name).aggregate(total=Sum('quantity'))
+        acquired_total = acquired_agg['total']
+        if acquired_total and acquired_total > 0:
+            total_acquired = acquired_total
+            purchase_subtotal = PurchaseItem.objects.filter(product=p, purchase__supplier__icontains=sup.name).aggregate(
+                subtotal=Sum(ExpressionWrapper(F('quantity') * F('price_at_purchase'), output_field=DecimalField()))
+            )['subtotal'] or 0
         else:
-            # both
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="{sup.name}_history.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['Type', 'Ref ID', 'Date', 'Item/Supplier', 'Quantity/Notes', 'Amount'])
-            for p in purchases:
-                writer.writerow(['Purchase', p.id, p.timestamp.strftime('%Y-%m-%d %H:%M'), p.supplier or '', '', float(p.total_amount)])
-            for si in sale_items:
-                writer.writerow(['Sale', si.sale.id, si.sale.timestamp.strftime('%Y-%m-%d %H:%M'), si.product.name, si.quantity, float(si.quantity * si.price_at_sale)])
-            return response
+            # If there are no PurchaseItem rows (older data), infer acquired qty from current stock + total sold
+            total_sold = SaleItem.objects.filter(product=p).aggregate(qty=Sum('quantity'))['qty'] or 0
+            current_stock = p.stock_quantity or 0
+            total_acquired = current_stock + total_sold
+            purchase_subtotal = float(total_acquired) * float(p.purchase_price or 0)
+        sales_revenue = float(total_sold) * float(p.selling_price or 0)
+        product_summary.append({
+            'product': p,
+            'purchase_price': p.purchase_price,
+            'selling_price': p.selling_price,
+            'acquired_qty': total_acquired,
+            'sold_qty': total_sold,
+            'purchase_subtotal': purchase_subtotal,
+            'sales_revenue': sales_revenue,
+        })
+
+    # Build combined history (purchase lines + sales lines)
+    combined_history = []
+    # include PurchaseItem lines
+    purchase_items = []
+    try:
+        # include PurchaseItem rows where the purchase supplier text contains the supplier name
+        # or where the Product.supplier FK points to this supplier — covers both legacy and newer records
+        purchase_items = PurchaseItem.objects.filter(
+            Q(purchase__supplier__icontains=sup.name) | Q(product__supplier=sup)
+        ).select_related('purchase', 'product')
+    except Exception:
+        purchase_items = []
+
+    purchase_ids_with_items = set([pi.purchase_id for pi in purchase_items])
+
+    for pi in purchase_items:
+        combined_history.append({
+            'type': 'Purchase',
+            'ref_id': pi.purchase.id,
+            'date': pi.purchase.timestamp,
+            'item': pi.product.name,
+            'quantity': pi.quantity,
+            'amount': float(pi.quantity) * float(pi.price_at_purchase or 0),
+        })
+
+    # purchases without PurchaseItem lines — fall back to Purchase.total_amount
+    purchases_without_items = purchases.exclude(pk__in=purchase_ids_with_items)
+    for p in purchases_without_items:
+        combined_history.append({
+            'type': 'Purchase',
+            'ref_id': p.id,
+            'date': p.timestamp,
+            'item': p.supplier or '',
+            'quantity': '',
+            'amount': float(p.total_amount or 0),
+        })
+
+    # add sale lines
+    for si in sale_items:
+        combined_history.append({
+            'type': 'Sale',
+            'ref_id': si.sale.id,
+            'date': si.sale.timestamp,
+            'item': si.product.name,
+            'quantity': si.quantity,
+            'amount': float(si.quantity) * float(si.price_at_sale or 0),
+        })
+
+    # sort by date desc
+    combined_history.sort(key=lambda x: x['date'] or datetime.min, reverse=True)
+
+    # Export disabled: CSV export removed per project settings
 
     context = {
         'supplier': sup,
@@ -672,8 +767,29 @@ def supplier_history(request, pk):
         'sale_items': sale_items,
         'purchases_total': purchases_total,
         'sales_total': sales_total,
+        'product_summary': product_summary,
+        'combined_history': combined_history,
     }
     return render(request, 'supplier_history.html', context)
+
+
+@login_required
+def supplier_create(request):
+    """Add a new supplier."""
+    if request.user.role == 'cashier':
+        messages.error(request, 'Access denied. Manager or Admin only.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = SupplierForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Supplier added successfully.')
+            return redirect('supplier_list')
+    else:
+        form = SupplierForm()
+
+    return render(request, 'supplier_form.html', {'form': form, 'title': 'Add Supplier'})
 
 
 @login_required
@@ -697,8 +813,6 @@ def supplier_list(request):
 @login_required
 def sales_report(request):
     """Generate sales reports for a given period with quantity details."""
-    import csv
-    from django.http import HttpResponse
 
     if request.user.role == 'cashier':
         messages.error(request, 'Access denied. Manager or Admin only.')
@@ -745,15 +859,7 @@ def sales_report(request):
             'period': f"{start_date} to {end_date}"
         }
         
-        # CSV Export Logic
-        if request.GET.get('export') == '1':
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="sales_report_{start_date}_to_{end_date}.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['Product ID', 'Product Name', 'Total Quantity Sold', 'Total Revenue', 'Transaction Count'])
-            for pid, data in product_summary.items():
-                writer.writerow([pid, data['product_name'], data['total_quantity'], data['total_revenue'], data['num_items']])
-            return response
+        # Export disabled: CSV export removed per project settings
     
     context = {
         'form': form,
@@ -767,14 +873,12 @@ def sales_report(request):
 @login_required
 def inventory_report(request):
     """Generate inventory reports."""
-    import csv
-    from django.http import HttpResponse
 
     if request.user.role == 'cashier':
         messages.error(request, 'Access denied. Manager or Admin only.')
         return redirect('dashboard')
     
-    products = Product.objects.all()
+    products = Product.objects.filter(is_active=True)
 
     # Filters: purchase_type (cash/credit) and supplier
     purchase_type = request.GET.get('purchase_type')
@@ -805,30 +909,7 @@ def inventory_report(request):
         'out_of_stock_count': products.filter(stock_quantity=0).count(),
     }
     
-    # CSV Export Logic
-    if request.GET.get('export') == '1':
-        response = HttpResponse(content_type='text/csv')
-        filename = 'inventory_report.csv'
-        if purchase_type:
-            filename = f"inventory_report_{purchase_type}.csv"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        writer = csv.writer(response)
-        writer.writerow(['ID', 'SKU', 'Name', 'Category', 'Purchase Type', 'Supplier', 'Purchase Price', 'Selling Price', 'Stock Quantity', 'Stock Value (Sell)', 'Stock Cost (Purchase)'])
-        for p in products:
-            writer.writerow([
-                p.id,
-                p.sku,
-                p.name,
-                p.category,
-                p.get_purchase_type_display(),
-                (p.supplier.name if p.supplier else ''),
-                float(p.purchase_price),
-                float(p.selling_price),
-                p.stock_quantity,
-                float(p.stock_quantity * p.selling_price),
-                float(p.stock_quantity * p.purchase_price),
-            ])
-        return response
+    # Export disabled: CSV export removed per project settings
     
     context = {
         'products': products,

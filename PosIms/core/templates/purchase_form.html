@@ -24,13 +24,77 @@
                 {{ form.credit_by.label_tag }}
                 {{ form.credit_by }}
             </div>
-            <div class="mb-3">
-                {{ form.total_amount.label_tag }}
-                {{ form.total_amount }}
+            <h5 class="mb-3">Products</h5>
+            <div class="table-responsive mb-3">
+                <table class="table" id="purchase-lines">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
             </div>
-            <button class="btn btn-primary">Save</button>
+            <button type="button" id="add-line" class="btn btn-outline-secondary mb-3">Add Product Line</button>
+            <div>
+                <button class="btn btn-primary">Save Purchase</button>
+            </div>
         </form>
     </div>
 </div>
+
+<script>
+    const products = [
+        {% for p in products %}
+            {id: {{ p.id }}, name: "{{ p.name|escapejs }}", price: {{ p.purchase_price|default:0 }} },
+        {% endfor %}
+    ];
+
+    function makeRow() {
+        const tr = document.createElement('tr');
+
+        const tdProd = document.createElement('td');
+        const sel = document.createElement('select');
+        sel.name = 'product_id';
+        sel.className = 'form-select';
+        const emptyOpt = document.createElement('option'); emptyOpt.value=''; emptyOpt.text='-- Select --'; sel.appendChild(emptyOpt);
+        products.forEach(p=>{
+            const o = document.createElement('option'); o.value = p.id; o.text = p.name; o.dataset.price = p.price; sel.appendChild(o);
+        });
+        tdProd.appendChild(sel);
+
+        const tdQty = document.createElement('td');
+        const q = document.createElement('input'); q.type='number'; q.name='quantity'; q.value=1; q.min=1; q.className='form-control'; tdQty.appendChild(q);
+
+        const tdPrice = document.createElement('td');
+        const pr = document.createElement('input'); pr.type='number'; pr.name='price'; pr.step='0.01'; pr.className='form-control'; tdPrice.appendChild(pr);
+
+        sel.addEventListener('change', ()=>{
+            const opt = sel.options[sel.selectedIndex];
+            pr.value = opt.dataset.price || '';
+        });
+
+        const tdRem = document.createElement('td');
+        const btn = document.createElement('button'); btn.type='button'; btn.className='btn btn-sm btn-danger'; btn.textContent='Remove';
+        btn.addEventListener('click', ()=> tr.remove()); tdRem.appendChild(btn);
+
+        tr.appendChild(tdProd); tr.appendChild(tdQty); tr.appendChild(tdPrice); tr.appendChild(tdRem);
+        return tr;
+    }
+
+    document.getElementById('add-line').addEventListener('click', function(){
+        const tbody = document.querySelector('#purchase-lines tbody');
+        tbody.appendChild(makeRow());
+    });
+
+    // add initial empty row
+    document.addEventListener('DOMContentLoaded', function(){
+        document.getElementById('add-line').click();
+    });
+</script>
 
 {% endblock %}

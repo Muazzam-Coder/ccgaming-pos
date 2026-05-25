@@ -65,6 +65,7 @@ urlpatterns = [
     path('purchases/create/', views.purchase_create, name='purchase_create'),
     path('reports/purchases/', views.purchase_report, name='purchase_report'),
     path('reports/suppliers/<int:pk>/history/', views.supplier_history, name='supplier_history'),
+    path('suppliers/create/', views.supplier_create, name='supplier_create'),
     path('suppliers/', views.supplier_list, name='supplier_list'),
     
     # ============ Report URLs ============

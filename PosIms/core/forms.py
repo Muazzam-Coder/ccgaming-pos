@@ -4,6 +4,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import User, Customer, Product, Sale, SaleItem, Supplier
 from .models import Purchase
+from django.forms import ValidationError
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -105,12 +106,11 @@ class ReportForm(forms.Form):
 class PurchaseForm(forms.ModelForm):
     class Meta:
         model = Purchase
-        fields = ('supplier', 'purchase_type', 'credit_by', 'total_amount')
+        fields = ('supplier', 'purchase_type', 'credit_by')
         widgets = {
             'supplier': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Supplier name'}),
             'purchase_type': forms.Select(attrs={'class': 'form-control'}),
             'credit_by': forms.Select(attrs={'class': 'form-control'}),
-            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
     
     def clean(self):
@@ -120,3 +120,19 @@ class PurchaseForm(forms.ModelForm):
         if ptype == 'credit' and not credit_by:
             raise forms.ValidationError('For credit purchases you must specify who is responsible (credit_by).')
         return cleaned
+
+
+class SupplierForm(forms.ModelForm):
+    class Meta:
+        model = Supplier
+        fields = ('name', 'contact')
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Supplier Name'}),
+            'contact': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact details (optional)'}),
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if not name:
+            raise ValidationError('Supplier name is required.')
+        return name

@@ -39,6 +39,7 @@ class Product(models.Model):
     )
     purchase_type = models.CharField(max_length=10, choices=PURCHASE_CHOICES, default='cash')
     supplier = models.ForeignKey('Supplier', on_delete=models.SET_NULL, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.name} - Stock: {self.stock_quantity}"
@@ -111,3 +112,13 @@ class Purchase(models.Model):
 
     def __str__(self):
         return f"Purchase #{self.id} - {self.get_purchase_type_display()} - {self.timestamp.date()}"
+
+
+class PurchaseItem(models.Model):
+    purchase = models.ForeignKey(Purchase, related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField()
+    price_at_purchase = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} @ {self.price_at_purchase} in Purchase {self.purchase.id}"
